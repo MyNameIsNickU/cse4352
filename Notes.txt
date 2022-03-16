@@ -1,0 +1,5 @@
+-TODO-
+Obviously check conversation still occurs after changes today
+Check if DHCPRELEASE has sourceIp filled in
+Maybe try testing RENEW state and see if timers and multiple uses of requestTimeout is okay.
+Look into DHCPINFORM messages 
