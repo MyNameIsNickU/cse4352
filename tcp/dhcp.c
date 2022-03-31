@@ -618,13 +618,9 @@ void dhcpHandleAck(etherHeader *ether)
 		localInfo.leaseT2 = localInfo.leaseTotal * .875;
 	
 	// start t1, t2, and lease end timers
-	
 	startOneshotTimer(leaseTimeout, localInfo.leaseTotal);
-	startOneshotTimer(t1Timeout, 5 + 20);
+	startOneshotTimer(t1Timeout, localInfo.leaseT1);
 	startOneshotTimer(t2Timeout, localInfo.leaseT2);
-	/*startOneshotTimer(t1Timeout, 5 + 20);
-	startOneshotTimer(t2Timeout, 10 + 20);
-	startOneshotTimer(leaseTimeout, localInfo.leaseTotal);*/
 	
 }
 
