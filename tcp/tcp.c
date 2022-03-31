@@ -17,24 +17,24 @@
    ======================== */
    
 // TCP Message Types
-#define FIN 1
-#define SYN 2
-#define RST 4
-#define PSH 8
-#define ACK 16
+#define TCPFIN 1
+#define TCPSYN 2
+#define TCPRST 4
+#define TCPPSH 8
+#define TCPACK 16
+#define TCPURG 32
 
-
-#define TCP_CLOSED          0 // "fictional state"
-#define TCP_LISTEN          1
-#define TCP_SYN_SENT        2
-#define TCP_SYN_RECIEVED    3
-#define TCP_ESTABLISHED     4
-#define TCP_FIN_WAIT1       5
-#define TCP_FIN_WAIT2       6
-#define TCP_CLOSE_WAIT      7
-#define TCP_CLOSING         8
-#define TCP_LAST_ACK        9
-#define TCP_TIME_WAIT       10
+// #define TCP_CLOSED          0 // "fictional state"
+// #define TCP_LISTEN          1
+// #define TCP_SYN_SENT        2
+// #define TCP_SYN_RECIEVED    3
+// #define TCP_ESTABLISHED     4
+// #define TCP_FIN_WAIT1       5
+// #define TCP_FIN_WAIT2       6
+// #define TCP_CLOSE_WAIT      7
+// #define TCP_CLOSING         8
+// #define TCP_LAST_ACK        9
+// #define TCP_TIME_WAIT       10
 
 
 /* ========================
@@ -42,7 +42,7 @@
    ======================== */
 uint8_t tcpState = 0;
 
-bool synFlag = false;
+bool initSynFlag = false;
 
 /*  ========================== *
  *      TCP STATE FUNCTIONS    *
@@ -76,11 +76,12 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
     uint16_t tmp16;
     uint8_t mac[6], myIP[4];
 	
+	uint8_t testMac[6] = {0x00, 0x0E, 0xC6, 0x7C, 0x73, 0x69};
 	// Ether Header
 	etherGetMacAddress(mac);
 	for (i = 0; i < HW_ADD_LENGTH; i++)
     {
-        ether->destAddress[i] = 0xFF;
+        ether->destAddress[i] = testMac[i];
         ether->sourceAddress[i] = mac[i];
     }
 	ether->frameType = htons(0x800);
@@ -101,7 +102,7 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
     for (i = 0; i < IP_ADD_LENGTH; i++)
     {
         ip->destIp[i] = s->svrIp[i]; // Send to SOCKET's server IP
-        ip->sourceIp[i] = myIP[i]; // From our device IP, should also be SOCKET's device IP
+        ip->sourceIp[i] = s->devIp[i]; // From our device IP, should also be SOCKET's device IP
     }
 	
 	
@@ -128,6 +129,12 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 		tcp->sequenceNumber = 0;
 		tcp->acknowledgementNumber = 0;
 	}
+	else if( tcpGetState() == TCP_SYN_SENT )
+	{
+		
+	}
+	
+	tcp->windowSize = htons(128);
 
 	tcp->urgentPointer = 0;
 
@@ -181,21 +188,48 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 
 }
 
+bool tcpIsAck(etherHeader *ether)
+{
+	ipHeader* ip = (ipHeader*)ether->data;
+	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
+	
+	if( (tcp->offsetFields | TCPACK == 1) && (ip->protocol == 6) )
+		return true;
+	else
+		return false;
+	
+}
+
+bool tcpIsSyn(etherHeader *ether)
+{
+	ipHeader* ip = (ipHeader*)ether->data;
+	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
+	
+	if( (tcp->offsetFields | TCPSYN == 1) && (ip->protocol == 6) )
+		return true;
+	else
+		return false;
+}
+
 void tcpSendPendingMessages(etherHeader *ether, SOCKET *s)
 {
-	if(synFlag)
+	if(initSynFlag)
 	{
-	    tcpSendMessage(ether, s, SYN);
-	    synFlag = false;
+	    tcpSendMessage(ether, s, TCPSYN);
+		s->sequenceNumber++;
+	    initSynFlag = false;
 	}
 }
 
 void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 {
-	
+	if( tcpIsAck(ether) && tcpIsSyn(ether) )
+	{
+		putsUart0("Received TCP: ACK & SYN.\n");
+	}
 }
 
 void tcpSynReq()
 {
-    synFlag = true;
+    initSynFlag = true;
 }

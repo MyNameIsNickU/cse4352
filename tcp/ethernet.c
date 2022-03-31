@@ -280,6 +280,10 @@ void processShell()
             {
                 tcpSynReq();
             }
+			if (strcmp(token, "arp") == 0)
+			{
+				
+			}
             if (strcmp(token, "ifconfig") == 0)
             {
                 displayConnectionInfo();
@@ -402,11 +406,20 @@ int main(void)
     waitMicrosecond(100000);
 	etherClearOverflow();
 	
-	uint8_t i;
-	for(i = 0; i < IP_ADD_LENGTH; i++)
-	{
-		
-	}
+	// Hardcode SOCKET info for testing
+	// Randomly assigned TCP port
+	s.devPort = 65535;
+	s.svrPort = 65535;
+	
+	s.devIp[0] = 192;
+	s.devIp[1] = 168;
+	s.devIp[2] = 1;
+	s.devIp[3] = 110;
+	
+	s.svrIp[0] = 192;
+	s.svrIp[1] = 168;
+	s.svrIp[2] = 1;
+	s.svrIp[3] = 90;
 
     // Main Loop
     // RTOS and interrupts would greatly improve this code,
