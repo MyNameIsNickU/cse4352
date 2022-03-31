@@ -156,7 +156,7 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 	//
 	uint16_t offset = 0;
 	offset |= ( (tcpHeaderSize) / 4) << 12; // Size / 4 bytes << Shifted to upper 4 bits
-	offset |= type;
+	offset |= type; // TCP Flags
 	tcp->offsetFields = htons(offset);
 
 
