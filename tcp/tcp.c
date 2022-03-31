@@ -1,4 +1,5 @@
 // TCP Library
+// Written by Nicholas Untrecht
 
 #include <stdio.h>
 #include <stdint.h>
