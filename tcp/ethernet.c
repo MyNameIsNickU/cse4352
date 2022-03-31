@@ -48,6 +48,7 @@
 #include "timer.h"
 #include "eth0.h"
 #include "dhcp.h"
+#include "tcp.h"
 
 // Pins
 #define RED_LED PORTF,1
@@ -226,12 +227,6 @@ uint8_t asciiToUint8(const char str[])
     return data;
 }
 
-
-void testing4ARP()
-{
-
-}
-
 void processShell()
 {
     bool end;
@@ -281,9 +276,9 @@ void processShell()
                 else
                     putsUart0("Error in dhcp argument\r");
             }
-            if (strcmp(token, "arp") == 0)
+            if (strcmp(token, "tcp") == 0)
             {
-                testing4ARP();
+                tcpSynReq();
             }
             if (strcmp(token, "ifconfig") == 0)
             {
@@ -380,6 +375,7 @@ int main(void)
     uint8_t* udpData;
     uint8_t buffer[MAX_PACKET_SIZE];
     etherHeader *data = (etherHeader*) buffer;
+	SOCKET s = {0};
 
     // Init controller
     initHw();
@@ -405,6 +401,12 @@ int main(void)
     setPinValue(GREEN_LED, 0);
     waitMicrosecond(100000);
 	etherClearOverflow();
+	
+	uint8_t i;
+	for(i = 0; i < IP_ADD_LENGTH; i++)
+	{
+		
+	}
 
     // Main Loop
     // RTOS and interrupts would greatly improve this code,
@@ -419,6 +421,8 @@ int main(void)
         {
             dhcpSendPendingMessages(data);
         }
+		
+		tcpSendPendingMessages(data, &s);
 
         // Packet processing
         if (etherIsDataAvailable())
@@ -472,6 +476,11 @@ int main(void)
 							setPinValue(GREEN_LED, 0);
 						etherSendUdpResponse(data, (uint8_t*)"Received", 9);
 					}
+				}
+				
+				if( etherIsTcp(data) )
+				{
+					tcpProcessTcpResponse(data, &s);
 				}
             }
         }

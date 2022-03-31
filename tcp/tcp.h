@@ -19,7 +19,7 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type);
 
 void tcpSendPendingMessages(etherHeader *ether, SOCKET *s);
 
-void tcpProcessTcpResponse(etherHeader *ether);
+void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s);
 
 void tcpSynReq(void);
 

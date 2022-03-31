@@ -120,8 +120,8 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 	// TCP Header
 	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
 	
-	tcp->sourcePort = s->devPort;
-	tcp->destPort = s->svrPort;
+	tcp->sourcePort = htons(s->devPort);
+	tcp->destPort = htons(s->svrPort);
 	
 	if( tcpGetState() == TCP_CLOSED )
 	{
@@ -190,7 +190,7 @@ void tcpSendPendingMessages(etherHeader *ether, SOCKET *s)
 	}
 }
 
-void tcpProcessTcpResponse(etherHeader *ether)
+void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 {
 	
 }
