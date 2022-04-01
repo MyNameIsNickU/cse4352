@@ -41,6 +41,8 @@
           TCP GLOBALS
    ======================== */
 uint8_t tcpState = 0;
+bool isClient = false;
+bool isServer = false;
 
 bool initSynFlag = false;
 
@@ -86,9 +88,8 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
         ether->sourceAddress[i] = mac[i];
     }
 	
-	uint8_t toMac[6] = {0xec, 0xa9, 0x40, 0xc1, 0xcc, 0xa0};
 	for(i = 0; i < HW_ADD_LENGTH; i++)
-		ether->destAddress[i] = toMac[i];
+		ether->destAddress[i] = s->svrAddress[i];
 	
 	ether->frameType = htons(0x800);
 	
@@ -135,9 +136,10 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 		tcp->sequenceNumber = 0;
 		tcp->acknowledgementNumber = 0;
 	}
-	else if( tcpGetState() == TCP_SYN_SENT )
+	else
 	{
-		
+		tcp->sequenceNumber = s->sequenceNumber;
+		tcp->acknowledgementNumber = s->acknowledgementNumber;
 	}
 	
 	tcp->windowSize = htons(128);
@@ -232,16 +234,19 @@ void tcpSendPendingMessages(etherHeader *ether, SOCKET *s)
 	if(initSynFlag)
 	{
 	    tcpSendMessage(ether, s, TCPSYN);
-		s->sequenceNumber++;
+		s->acknowledgementNumber = 1;
 	    initSynFlag = false;
+		tcpSetState(TCP_SYN_SENT);
 	}
 }
 
 void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 {
-	if( tcpIsAck(ether) && tcpIsSyn(ether) )
+	if( tcpGetState() == TCP_SYN_SENT && tcpIsAck(ether) && tcpIsSyn(ether) )
 	{
+		s->sequenceNumber = s->acknowledgementNumber;
 		putsUart0("Received TCP: ACK & SYN.\n");
+		//tcpSendMessage(ether, s, TCPACK);
 	}
 }
 

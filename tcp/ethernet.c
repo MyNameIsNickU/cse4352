@@ -407,20 +407,27 @@ int main(void)
 	etherClearOverflow();
 	
 	// Hardcode SOCKET info for testing
-	// Randomly assigned TCP port
+	// Randomly assigned TCP user port
 	s.devPort = 51243;
-	s.svrPort = 80;
+	s.svrPort = 80; // http
 	
 	s.devIp[0] = 192;
 	s.devIp[1] = 168;
 	s.devIp[2] = 1;
 	s.devIp[3] = 110;
 	
-	//142.251.40.196
+	//142.251.40.196 | Google.com's IP
 	s.svrIp[0] = 142;
 	s.svrIp[1] = 251;
 	s.svrIp[2] = 40;
 	s.svrIp[3] = 196;
+	
+	s.svrAddress[0] = 0xec;
+	s.svrAddress[1] = 0xa9;
+	s.svrAddress[2] = 0x40;
+	s.svrAddress[3] = 0xc1;
+	s.svrAddress[4] = 0xcc;
+	s.svrAddress[5] = 0xa0;
 
     // Main Loop
     // RTOS and interrupts would greatly improve this code,
