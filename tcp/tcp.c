@@ -76,14 +76,20 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
     uint16_t tmp16;
     uint8_t mac[6], myIP[4];
 	
-	uint8_t testMac[6] = {0x00, 0x0E, 0xC6, 0x7C, 0x73, 0x69};
+	
 	// Ether Header
 	etherGetMacAddress(mac);
+	
 	for (i = 0; i < HW_ADD_LENGTH; i++)
     {
-        ether->destAddress[i] = testMac[i];
+        ether->destAddress[i] = 0xFF;
         ether->sourceAddress[i] = mac[i];
     }
+	
+	uint8_t toMac[6] = {0x00, 0x0e, 0xc6, 0x7c, 0x73, 0xf1};
+	for(i = 0; i < HW_ADD_LENGTH; i++)
+		ether->destAddress[i] = toMac[i];
+	
 	ether->frameType = htons(0x800);
 	
 	// IP Header
@@ -96,7 +102,6 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
     ip->ttl = 128;
     ip->protocol = 6; // TCP
     ip->headerChecksum = 0;
-	
 	
 	etherGetIpAddress(myIP);
     for (i = 0; i < IP_ADD_LENGTH; i++)
@@ -140,20 +145,28 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 
 	// TCP Options
 	// Have to send TCP options in 4 byte groups?
-	/*tcp->data[opt++] = 1;
-	tcp->data[opt++] = 1;
-	tcp->data[opt++] = 1;
-	tcp->data[opt++] = 1;*/
+	tcp->data[opt++] = 2;
+	tcp->data[opt++] = 4;
+	tcp->data[opt++] = 4; // Max Seg size 1
+	tcp->data[opt++] = 0; // Max Seg size 2
+	tcp->data[opt++] = 1; // NOP
+	tcp->data[opt++] = 3;
+	tcp->data[opt++] = 3;
+	tcp->data[opt++] = 0; // Window Scale
+	tcp->data[opt++] = 1; // NOP
+	tcp->data[opt++] = 1; // NOP
+	tcp->data[opt++] = 4; // SACK PERMITTED
+	tcp->data[opt++] = 2; // SACK PERMITTED
 
 	// TCP Data
 	data_i = opt; // for array indexing
-	tcp->data[data_i++] = 'T';
+	/* tcp->data[data_i++] = 'T';
 	tcp->data[data_i++] = 'C';
 	tcp->data[data_i++] = 'P';
 	tcp->data[data_i++] = ' ';
 	tcp->data[data_i++] = 'S';
 	tcp->data[data_i++] = 'U';
-	tcp->data[data_i++] = 'X';
+	tcp->data[data_i++] = 'X'; */
 	data_i -= opt; // get normal data size after done
 
 	// Header Size Calc

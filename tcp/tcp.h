@@ -22,6 +22,7 @@ typedef struct _SOCKET
 {
 	uint8_t devIp[4];
 	uint8_t svrIp[4];
+	uint8_t svrAddress[6];
 	uint16_t devPort;
 	uint16_t svrPort;
 	uint32_t sequenceNumber;

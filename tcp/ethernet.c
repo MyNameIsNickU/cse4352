@@ -409,7 +409,7 @@ int main(void)
 	// Hardcode SOCKET info for testing
 	// Randomly assigned TCP port
 	s.devPort = 65535;
-	s.svrPort = 65535;
+	s.svrPort = 51394;
 	
 	s.devIp[0] = 192;
 	s.devIp[1] = 168;
@@ -491,7 +491,7 @@ int main(void)
 					}
 				}
 				
-				if( etherIsTcp(data) )
+				if( etherIsTcp(data) && etherIsIpUnicast(data) )
 				{
 					tcpProcessTcpResponse(data, &s);
 				}
