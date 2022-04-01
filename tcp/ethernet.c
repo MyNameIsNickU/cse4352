@@ -408,18 +408,19 @@ int main(void)
 	
 	// Hardcode SOCKET info for testing
 	// Randomly assigned TCP port
-	s.devPort = 65535;
-	s.svrPort = 51394;
+	s.devPort = 51243;
+	s.svrPort = 80;
 	
 	s.devIp[0] = 192;
 	s.devIp[1] = 168;
 	s.devIp[2] = 1;
 	s.devIp[3] = 110;
 	
-	s.svrIp[0] = 192;
-	s.svrIp[1] = 168;
-	s.svrIp[2] = 1;
-	s.svrIp[3] = 90;
+	//142.251.40.196
+	s.svrIp[0] = 142;
+	s.svrIp[1] = 251;
+	s.svrIp[2] = 40;
+	s.svrIp[3] = 196;
 
     // Main Loop
     // RTOS and interrupts would greatly improve this code,

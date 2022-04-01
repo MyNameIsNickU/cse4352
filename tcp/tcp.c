@@ -86,7 +86,7 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
         ether->sourceAddress[i] = mac[i];
     }
 	
-	uint8_t toMac[6] = {0x00, 0x0e, 0xc6, 0x7c, 0x73, 0xf1};
+	uint8_t toMac[6] = {0xec, 0xa9, 0x40, 0xc1, 0xcc, 0xa0};
 	for(i = 0; i < HW_ADD_LENGTH; i++)
 		ether->destAddress[i] = toMac[i];
 	
@@ -107,7 +107,8 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
     for (i = 0; i < IP_ADD_LENGTH; i++)
     {
         ip->destIp[i] = s->svrIp[i]; // Send to SOCKET's server IP
-        ip->sourceIp[i] = s->devIp[i]; // From our device IP, should also be SOCKET's device IP
+		ip->sourceIp[i] = myIP[i];
+        //ip->sourceIp[i] = s->devIp[i]; // From our device IP, should also be SOCKET's device IP
     }
 	
 	
@@ -149,10 +150,12 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 	tcp->data[opt++] = 4;
 	tcp->data[opt++] = 4; // Max Seg size 1
 	tcp->data[opt++] = 0; // Max Seg size 2
+	
 	tcp->data[opt++] = 1; // NOP
 	tcp->data[opt++] = 3;
 	tcp->data[opt++] = 3;
 	tcp->data[opt++] = 0; // Window Scale
+	
 	tcp->data[opt++] = 1; // NOP
 	tcp->data[opt++] = 1; // NOP
 	tcp->data[opt++] = 4; // SACK PERMITTED
@@ -175,7 +178,7 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 
 	//
 	uint16_t offset = 0;
-	offset |= ( (tcpHeaderSize) / 4) << 12; // Size / 4 bytes << Shifted to upper 4 bits
+	offset |= ( (tcpHeaderSize) / 4 ) << 12; // Size / 4 bytes << Shifted to upper 4 bits
 	offset |= type; // TCP Flags
 	tcp->offsetFields = htons(offset);
 
