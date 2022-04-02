@@ -84,12 +84,12 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 	
 	for (i = 0; i < HW_ADD_LENGTH; i++)
     {
-        ether->destAddress[i] = 0xFF;
+        ether->destAddress[i] = s->svrAddress[i];
         ether->sourceAddress[i] = mac[i];
     }
 	
-	for(i = 0; i < HW_ADD_LENGTH; i++)
-		ether->destAddress[i] = s->svrAddress[i];
+	/* for(i = 0; i < HW_ADD_LENGTH; i++)
+		ether->destAddress[i] = s->svrAddress[i]; */
 	
 	ether->frameType = htons(0x800);
 	
@@ -138,8 +138,8 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 	}
 	else
 	{
-		tcp->sequenceNumber = s->sequenceNumber;
-		tcp->acknowledgementNumber = s->acknowledgementNumber;
+		tcp->sequenceNumber = htonl(s->sequenceNumber);
+		tcp->acknowledgementNumber = htonl(s->acknowledgementNumber);
 	}
 	
 	tcp->windowSize = htons(1024);
@@ -206,13 +206,16 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 
 }
 
+/*  ========================== *
+ *       TCP FLAG CHECKERS     *
+ *  ========================== */
 bool tcpIsAck(etherHeader *ether)
 {
 	ipHeader* ip = (ipHeader*)ether->data;
 	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
-	uint16_t offset = htons(tcp->offsetFields)
+	uint16_t offset = htons(tcp->offsetFields);
 	
-	if( offset | TCPACK == 1) && (ip->protocol == 6) )
+	if( ((offset & TCPACK) == TCPACK) && (ip->protocol == 6) )
 		return true;
 	else
 		return false;
@@ -223,9 +226,9 @@ bool tcpIsSyn(etherHeader *ether)
 {
 	ipHeader* ip = (ipHeader*)ether->data;
 	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
-	uint16_t offset = htons(tcp->offsetFields)
+	uint16_t offset = htons(tcp->offsetFields);
 	
-	if( offset | TCPSYN == 1) && (ip->protocol == 6) )
+	if( ((offset & TCPSYN) == TCPSYN) && (ip->protocol == 6) )
 		return true;
 	else
 		return false;
@@ -235,9 +238,21 @@ bool tcpIsPsh(etherHeader *ether)
 {
 	ipHeader* ip = (ipHeader*)ether->data;
 	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
-	uint16_t offset = htons(tcp->offsetFields)
+	uint16_t offset = htons(tcp->offsetFields);
 	
-	if( offset | TCPPSH == 1) && (ip->protocol == 6) )
+	if( ((offset & TCPPSH) == TCPPSH) && (ip->protocol == 6) )
+		return true;
+	else
+		return false;
+}
+
+bool tcpIsFin(etherHeader *ether)
+{
+	ipHeader* ip = (ipHeader*)ether->data;
+	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
+	uint16_t offset = htons(tcp->offsetFields);
+	
+	if( ((offset & TCPFIN) == TCPFIN) && (ip->protocol == 6) )
 		return true;
 	else
 		return false;
@@ -248,7 +263,6 @@ void tcpSendPendingMessages(etherHeader *ether, SOCKET *s)
 	if(initSynFlag)
 	{
 	    tcpSendMessage(ether, s, TCPSYN);
-		s->acknowledgementNumber = htonl(1);
 	    initSynFlag = false;
 		tcpSetState(TCP_SYN_SENT);
 	}
@@ -256,16 +270,27 @@ void tcpSendPendingMessages(etherHeader *ether, SOCKET *s)
 
 void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 {
+	ipHeader* ip = (ipHeader*)ether->data;
+	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
+	
 	if( tcpGetState() == TCP_SYN_SENT && tcpIsAck(ether) && tcpIsSyn(ether) )
 	{
-		s->sequenceNumber = s->acknowledgementNumber;
+		s->sequenceNumber = ntohl(tcp->acknowledgementNumber);
+		s->acknowledgementNumber = ntohl(tcp->sequenceNumber) + 1;
 		putsUart0("Received TCP: ACK & SYN.\n");
 		tcpSendMessage(ether, s, TCPACK);
 		tcpSetState(TCP_ESTABLISHED);
 	}
-	if( tcpGetState() == TCP_ESTABLISHED && tcpIsAck(ether) && tcpIsPsh(ether) )
+	
+	if( tcpGetState() == TCP_ESTABLISHED && tcpIsAck(ether) )
 	{
-		putsUart0("Receving PSH/ACK data.\n");
+		if( tcpIsPsh(ether))
+			putsUart0("Receving PSH/ACK data.\n");
+		else if( tcpIsFin(ether) )
+		else
+		{
+			//tcpSendMessage(ether, s, TCPACK);
+		}
 	}
 }
 

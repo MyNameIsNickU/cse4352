@@ -427,12 +427,16 @@ int main(void)
 	s.svrIp[2] = 1;
 	s.svrIp[3] = 90;
 	
+	// Router MAC
 	s.svrAddress[0] = 0xec;
 	s.svrAddress[1] = 0xa9;
 	s.svrAddress[2] = 0x40;
 	s.svrAddress[3] = 0xc1;
 	s.svrAddress[4] = 0xcc;
 	s.svrAddress[5] = 0xa0;
+	
+	// Sequence Random Number
+	//s.sequenceNumber = 0x09ABCDEF;
 
     // Main Loop
     // RTOS and interrupts would greatly improve this code,
