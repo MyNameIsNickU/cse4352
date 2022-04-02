@@ -263,6 +263,7 @@ void tcpSendPendingMessages(etherHeader *ether, SOCKET *s)
 	{
 		tcpSendMessage(ether, s, TCPFIN | TCPACK);
 		finFlag = false;
+		tcpSetState(TCP_CLOSE_WAIT);
 	}
 }
 
@@ -270,6 +271,10 @@ void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 {
 	ipHeader* ip = (ipHeader*)ether->data;
 	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
+	uint8_t ipHeaderLength = (ip->revSize & 0xF) * 4;
+	// should grab offsetFields value
+	uint8_t tcpHeaderLength = sizeof(tcpHeader) + 0;
+	uint32_t dataSizeSent = 0;
 	
 	if( tcpGetState() == TCP_SYN_SENT && tcpIsAck(ether) && tcpIsSyn(ether) )
 	{
@@ -283,8 +288,14 @@ void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 	if( tcpGetState() == TCP_ESTABLISHED && tcpIsAck(ether) )
 	{
 		s->sequenceNumber = ntohl(tcp->acknowledgementNumber);
-		if( tcpIsPsh(ether))
+		if( tcpIsPsh(ether) )
+		{
 			putsUart0("Receving PSH/ACK data.\n");
+			dataSizeSent = ntohs(ip->length) - ipHeaderLength - tcpHeaderLength;
+			s->acknowledgementNumber = ntohl(tcp->sequenceNumber) + dataSizeSent;
+			tcpSendMessage(ether, s, TCPACK);
+		}
+		
 		else if( tcpIsFin(ether) )
 		{
 			s->acknowledgementNumber = s->sequenceNumber + 1;
@@ -296,6 +307,12 @@ void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 			// Probably requested a "are you still there"
 			//tcpSendMessage(ether, s, TCPACK);
 		}
+	}
+	
+	if(tcpGetState() == TCP_CLOSE_WAIT && tcpIsAck(ether) )
+	{
+		putsUart0("Successfully closed TCP connection.\n");
+		tcpSetState(TCP_CLOSED);
 	}
 }
 
