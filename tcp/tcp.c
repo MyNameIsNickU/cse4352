@@ -142,13 +142,13 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 		tcp->acknowledgementNumber = s->acknowledgementNumber;
 	}
 	
-	tcp->windowSize = htons(128);
+	tcp->windowSize = htons(1024);
 
 	tcp->urgentPointer = 0;
 
 	// TCP Options
 	// Have to send TCP options in 4 byte groups?
-	tcp->data[opt++] = 2;
+	/* tcp->data[opt++] = 2;
 	tcp->data[opt++] = 4;
 	tcp->data[opt++] = 4; // Max Seg size 1
 	tcp->data[opt++] = 0; // Max Seg size 2
@@ -161,7 +161,7 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 	tcp->data[opt++] = 1; // NOP
 	tcp->data[opt++] = 1; // NOP
 	tcp->data[opt++] = 4; // SACK PERMITTED
-	tcp->data[opt++] = 2; // SACK PERMITTED
+	tcp->data[opt++] = 2; // SACK PERMITTED */
 
 	// TCP Data
 	data_i = opt; // for array indexing
@@ -210,8 +210,9 @@ bool tcpIsAck(etherHeader *ether)
 {
 	ipHeader* ip = (ipHeader*)ether->data;
 	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
+	uint16_t offset = htons(tcp->offsetFields)
 	
-	if( (tcp->offsetFields | TCPACK == 1) && (ip->protocol == 6) )
+	if( offset | TCPACK == 1) && (ip->protocol == 6) )
 		return true;
 	else
 		return false;
@@ -222,8 +223,21 @@ bool tcpIsSyn(etherHeader *ether)
 {
 	ipHeader* ip = (ipHeader*)ether->data;
 	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
+	uint16_t offset = htons(tcp->offsetFields)
 	
-	if( (tcp->offsetFields | TCPSYN == 1) && (ip->protocol == 6) )
+	if( offset | TCPSYN == 1) && (ip->protocol == 6) )
+		return true;
+	else
+		return false;
+}
+
+bool tcpIsPsh(etherHeader *ether)
+{
+	ipHeader* ip = (ipHeader*)ether->data;
+	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
+	uint16_t offset = htons(tcp->offsetFields)
+	
+	if( offset | TCPPSH == 1) && (ip->protocol == 6) )
 		return true;
 	else
 		return false;
@@ -234,7 +248,7 @@ void tcpSendPendingMessages(etherHeader *ether, SOCKET *s)
 	if(initSynFlag)
 	{
 	    tcpSendMessage(ether, s, TCPSYN);
-		s->acknowledgementNumber = 1;
+		s->acknowledgementNumber = htonl(1);
 	    initSynFlag = false;
 		tcpSetState(TCP_SYN_SENT);
 	}
@@ -246,7 +260,12 @@ void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 	{
 		s->sequenceNumber = s->acknowledgementNumber;
 		putsUart0("Received TCP: ACK & SYN.\n");
-		//tcpSendMessage(ether, s, TCPACK);
+		tcpSendMessage(ether, s, TCPACK);
+		tcpSetState(TCP_ESTABLISHED);
+	}
+	if( tcpGetState() == TCP_ESTABLISHED && tcpIsAck(ether) && tcpIsPsh(ether) )
+	{
+		putsUart0("Receving PSH/ACK data.\n");
 	}
 }
 

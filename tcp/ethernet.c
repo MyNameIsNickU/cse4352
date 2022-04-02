@@ -409,7 +409,7 @@ int main(void)
 	// Hardcode SOCKET info for testing
 	// Randomly assigned TCP user port
 	s.devPort = 51243;
-	s.svrPort = 80; // http
+	s.svrPort = 65535; // http
 	
 	s.devIp[0] = 192;
 	s.devIp[1] = 168;
@@ -417,10 +417,15 @@ int main(void)
 	s.devIp[3] = 110;
 	
 	//142.251.40.196 | Google.com's IP
-	s.svrIp[0] = 142;
+	/* s.svrIp[0] = 142;
 	s.svrIp[1] = 251;
 	s.svrIp[2] = 40;
-	s.svrIp[3] = 196;
+	s.svrIp[3] = 196; */
+	
+	s.svrIp[0] = 192;
+	s.svrIp[1] = 168;
+	s.svrIp[2] = 1;
+	s.svrIp[3] = 90;
 	
 	s.svrAddress[0] = 0xec;
 	s.svrAddress[1] = 0xa9;
