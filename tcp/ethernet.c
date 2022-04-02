@@ -436,7 +436,7 @@ int main(void)
 	s.svrAddress[5] = 0xa0;
 	
 	// Sequence Random Number
-	//s.sequenceNumber = 0x09ABCDEF;
+	s.sequenceNumber = 0x09ABCDEF;
 
     // Main Loop
     // RTOS and interrupts would greatly improve this code,

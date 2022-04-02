@@ -131,16 +131,8 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 	tcp->sourcePort = htons(s->devPort);
 	tcp->destPort = htons(s->svrPort);
 	
-	if( tcpGetState() == TCP_CLOSED )
-	{
-		tcp->sequenceNumber = 0;
-		tcp->acknowledgementNumber = 0;
-	}
-	else
-	{
-		tcp->sequenceNumber = htonl(s->sequenceNumber);
-		tcp->acknowledgementNumber = htonl(s->acknowledgementNumber);
-	}
+	tcp->sequenceNumber = htonl(s->sequenceNumber);
+	tcp->acknowledgementNumber = htonl(s->acknowledgementNumber);
 	
 	tcp->windowSize = htons(1024);
 
@@ -284,11 +276,18 @@ void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 	
 	if( tcpGetState() == TCP_ESTABLISHED && tcpIsAck(ether) )
 	{
+		s->sequenceNumber = ntohl(tcp->acknowledgementNumber);
 		if( tcpIsPsh(ether))
 			putsUart0("Receving PSH/ACK data.\n");
 		else if( tcpIsFin(ether) )
+		{
+			s->acknowledgementNumber = s->sequenceNumber + 1;
+			tcpSendMessage(ether, s, TCPACK);
+			tcpSetState(TCP_CLOSED);
+		}
 		else
 		{
+			// Probably requested a "are you still there"
 			//tcpSendMessage(ether, s, TCPACK);
 		}
 	}
