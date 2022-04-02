@@ -36,5 +36,6 @@ void tcpSendPendingMessages(etherHeader *ether, SOCKET *s);
 void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s);
 
 void tcpSynReq(void);
+void tcpFinReq(void);
 
 #endif

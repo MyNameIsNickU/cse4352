@@ -44,7 +44,8 @@ uint8_t tcpState = 0;
 bool isClient = false;
 bool isServer = false;
 
-bool initSynFlag = false;
+bool synFlag = false;
+bool finFlag = false;
 
 /*  ========================== *
  *      TCP STATE FUNCTIONS    *
@@ -252,11 +253,16 @@ bool tcpIsFin(etherHeader *ether)
 
 void tcpSendPendingMessages(etherHeader *ether, SOCKET *s)
 {
-	if(initSynFlag)
+	if(synFlag)
 	{
 	    tcpSendMessage(ether, s, TCPSYN);
-	    initSynFlag = false;
+	    synFlag = false;
 		tcpSetState(TCP_SYN_SENT);
+	}
+	if(finFlag)
+	{
+		tcpSendMessage(ether, s, TCPFIN | TCPACK);
+		finFlag = false;
 	}
 }
 
@@ -295,5 +301,10 @@ void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 
 void tcpSynReq()
 {
-    initSynFlag = true;
+    synFlag = true;
+}
+
+void tcpFinReq()
+{
+	finFlag = true;
 }

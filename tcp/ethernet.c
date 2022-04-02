@@ -278,7 +278,15 @@ void processShell()
             }
             if (strcmp(token, "tcp") == 0)
             {
-                tcpSynReq();
+				token = strtok(NULL, " ");
+                if (strcmp(token, "syn") == 0)
+                {
+                    tcpSynReq();
+                }
+                else if(strcmp(token, "fin") == 0)
+				{
+					tcpFinReq();
+				}
             }
 			if (strcmp(token, "arp") == 0)
 			{
