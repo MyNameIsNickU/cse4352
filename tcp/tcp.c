@@ -40,27 +40,30 @@
 /* ========================
           TCP GLOBALS
    ======================== */
-uint8_t tcpState = 0;
+uint8_t tcpClientState = 0;
+uint8_t tcpServerState = 1;
+
 bool isClient = false;
 bool isServer = false;
 
 bool synFlag = false;
 bool finFlag = false;
+bool gwFlag = false;
 
 /*  ========================== *
  *      TCP STATE FUNCTIONS    *
  *  ========================== */
-uint8_t tcpGetState()
+uint8_t tcpGetClientState()
 {
-	return tcpState;
+	return tcpClientState;
 }
 
-void tcpSetState(uint8_t state)
+void tcpSetClientState(uint8_t state)
 {
-	if(tcpState == state)
+	if(tcpClientState == state)
 		return;
 	
-	tcpState = state;
+	tcpClientState = state;
 	
 	putsUart0("TCP State set to: ");
 	putcUart0(state + 48);
@@ -132,6 +135,12 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
 	tcp->sourcePort = htons(s->devPort);
 	tcp->destPort = htons(s->svrPort);
 	
+	if( tcpGetClientState() == TCP_CLOSED || tcpGetClientState() == TCP_SYN_SENT )
+	{
+		s->sequenceNumber = random32();
+		s->acknowledgementNumber = 0;
+	}
+	
 	tcp->sequenceNumber = htonl(s->sequenceNumber);
 	tcp->acknowledgementNumber = htonl(s->acknowledgementNumber);
 	
@@ -196,6 +205,10 @@ void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type)
     tcp->checksum = getEtherChecksum(sum);
 
     etherPutPacket(ether, sizeof(etherHeader) + ipHeaderLength + tcpTotalSize);
+	
+	
+	if( tcpGetClientState() == TCP_ESTABLISHED && (type & TCPPSH) == TCPPSH )
+		s->sequenceNumber += tcpDataSize;
 
 }
 
@@ -251,19 +264,64 @@ bool tcpIsFin(etherHeader *ether)
 		return false;
 }
 
+bool tcpValidateNumber(etherHeader *ether, SOCKET *s)
+{
+	ipHeader* ip = (ipHeader*)ether->data;
+	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
+	
+	if( s->sequenceNumber == ntohl(tcp->acknowledgementNumber) )
+		return true;
+	else
+		return false;
+}
+
+bool tcpIsPortOpen(etherHeader *data)
+{
+	return tcpGetClientState() != TCP_CLOSED;
+}
+
+void tcpGetGateway(etherHeader *ether, SOCKET *s)
+{
+	uint8_t myIP[4] = {192, 168, 1, 110};
+	uint8_t gwIP[4] = {192, 168, 1, 1};
+	etherSendArpRequest(ether, myIP, gwIP);
+}
+
+void tcpProcessArpResponse(etherHeader *ether, SOCKET *s)
+{
+	arpPacket *arp = (arpPacket*)ether->data;
+	uint8_t i;
+	uint8_t gwIP[4] = {192, 168, 1, 1};
+	if( arp->sourceIp[3] == gwIP[3] )
+	{
+		for(i = 0; i < HW_ADD_LENGTH; i++)
+		{
+			s->svrAddress[i] = ether->sourceAddress[i];
+		}
+		putsUart0("Set HW address for Gateway.\n");
+	}
+}
+
 void tcpSendPendingMessages(etherHeader *ether, SOCKET *s)
 {
 	if(synFlag)
 	{
 	    tcpSendMessage(ether, s, TCPSYN);
 	    synFlag = false;
-		tcpSetState(TCP_SYN_SENT);
+		tcpSetClientState(TCP_SYN_SENT);
+		s->sequenceNumber++;
+		isClient = true;
+	}
+	if(gwFlag)
+	{
+		tcpGetGateway(ether, s);
+		gwFlag = false;
 	}
 	if(finFlag)
 	{
 		tcpSendMessage(ether, s, TCPFIN | TCPACK);
 		finFlag = false;
-		tcpSetState(TCP_CLOSE_WAIT);
+		tcpSetClientState(TCP_CLOSE_WAIT);
 	}
 }
 
@@ -273,19 +331,19 @@ void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 	tcpHeader* tcp = (tcpHeader*)((uint8_t*)ip + ((ip->revSize & 0xF) * 4));
 	uint8_t ipHeaderLength = (ip->revSize & 0xF) * 4;
 	// should grab offsetFields value
-	uint8_t tcpHeaderLength = sizeof(tcpHeader) + 0;
+	uint16_t offset = ntohs(tcp->offsetFields);
+	uint8_t tcpHeaderLength = (((offset & 0xF000) >> 12) * 4);
 	uint32_t dataSizeSent = 0;
 	
-	if( tcpGetState() == TCP_SYN_SENT && tcpIsAck(ether) && tcpIsSyn(ether) )
+	if( tcpGetClientState() == TCP_SYN_SENT && tcpIsAck(ether) && tcpIsSyn(ether) && tcpValidateNumber(ether, s) )
 	{
-		s->sequenceNumber = ntohl(tcp->acknowledgementNumber);
 		s->acknowledgementNumber = ntohl(tcp->sequenceNumber) + 1;
 		putsUart0("Received TCP: ACK & SYN.\n");
 		tcpSendMessage(ether, s, TCPACK);
-		tcpSetState(TCP_ESTABLISHED);
+		tcpSetClientState(TCP_ESTABLISHED);
 	}
 	
-	if( tcpGetState() == TCP_ESTABLISHED && tcpIsAck(ether) )
+	if( tcpGetClientState() == TCP_ESTABLISHED && tcpIsAck(ether) )
 	{
 		s->sequenceNumber = ntohl(tcp->acknowledgementNumber);
 		if( tcpIsPsh(ether) )
@@ -298,9 +356,9 @@ void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 		
 		else if( tcpIsFin(ether) )
 		{
-			s->acknowledgementNumber = s->sequenceNumber + 1;
+			s->acknowledgementNumber = ntohl(tcp->sequenceNumber) + 1;
 			tcpSendMessage(ether, s, TCPACK);
-			tcpSetState(TCP_CLOSED);
+			tcpSetClientState(TCP_CLOSED);
 		}
 		else
 		{
@@ -309,10 +367,10 @@ void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s)
 		}
 	}
 	
-	if(tcpGetState() == TCP_CLOSE_WAIT && tcpIsAck(ether) )
+	if(tcpGetClientState() == TCP_CLOSE_WAIT && tcpIsAck(ether) )
 	{
 		putsUart0("Successfully closed TCP connection.\n");
-		tcpSetState(TCP_CLOSED);
+		tcpSetClientState(TCP_CLOSED);
 	}
 }
 
@@ -324,4 +382,9 @@ void tcpSynReq()
 void tcpFinReq()
 {
 	finFlag = true;
+}
+
+void tcpGwReq()
+{
+	gwFlag = true;
 }

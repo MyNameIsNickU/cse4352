@@ -31,11 +31,16 @@ typedef struct _SOCKET
 
 void tcpSendMessage(etherHeader *ether, SOCKET * s, uint8_t type);
 
+bool tcpIsPortOpen(etherHeader *data);
+
+void tcpProcessArpResponse(etherHeader *ether, SOCKET *s);
+
 void tcpSendPendingMessages(etherHeader *ether, SOCKET *s);
 
 void tcpProcessTcpResponse(etherHeader *ether, SOCKET *s);
 
 void tcpSynReq(void);
 void tcpFinReq(void);
+void tcpGwReq(void);
 
 #endif
