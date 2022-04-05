@@ -812,7 +812,7 @@ void dhcpProcessArpResponse(etherHeader *ether)
 	char str[10];
 	bool selfResponse = false;
 	
-	putsUart0("Received ARP...\nsIP: ");
+	/* putsUart0("Received ARP...\nsIP: ");
 	for(i = 0; i < IP_ADD_LENGTH; i++)
 	{
 		sprintf(str, "%u", arp->sourceIp[i]);
@@ -850,7 +850,7 @@ void dhcpProcessArpResponse(etherHeader *ether)
 		if (i < 6-1)
 			putcUart0(':');
 	}
-	putcUart0('\n');
+	putcUart0('\n'); */
 	
 	// These should always be linked, one shouldn't change without the other
 	if(arpAllClear || !conflictResolutionMode)
