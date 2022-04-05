@@ -287,6 +287,10 @@ void processShell()
 				{
 					tcpFinReq();
 				}
+				else if(strcmp(token, "gw") == 0)
+				{
+					tcpGwReq();
+				}
             }
 			if (strcmp(token, "arp") == 0)
 			{
@@ -416,8 +420,8 @@ int main(void)
 	
 	// Hardcode SOCKET info for testing
 	// Randomly assigned TCP user port
-	s.devPort = 51243;
-	s.svrPort = 65535; // http
+	s.devPort = 50234;
+	s.svrPort = 1883; // Unsecured MQTT
 	
 	s.devIp[0] = 192;
 	s.devIp[1] = 168;
@@ -425,26 +429,35 @@ int main(void)
 	s.devIp[3] = 110;
 	
 	//142.251.40.196 | Google.com's IP
-	/* s.svrIp[0] = 142;
-	s.svrIp[1] = 251;
-	s.svrIp[2] = 40;
-	s.svrIp[3] = 196; */
+	// 52.54.110.50 | 52.54.163.195 |  adafruit
+	s.svrIp[0] = 52;
+	s.svrIp[1] = 54;
+	s.svrIp[2] = 110;
+	s.svrIp[3] = 50;
 	
-	s.svrIp[0] = 192;
+	/* s.svrIp[0] = 192;
 	s.svrIp[1] = 168;
 	s.svrIp[2] = 1;
-	s.svrIp[3] = 90;
+	s.svrIp[3] = 90; */
 	
 	// Router MAC
-	s.svrAddress[0] = 0xec;
+	/* s.svrAddress[0] = 0xec;
 	s.svrAddress[1] = 0xa9;
 	s.svrAddress[2] = 0x40;
 	s.svrAddress[3] = 0xc1;
 	s.svrAddress[4] = 0xcc;
-	s.svrAddress[5] = 0xa0;
+	s.svrAddress[5] = 0xa0; */
+	
+	// School Router MAC
+	s.svrAddress[0] = 0x3c;
+	s.svrAddress[1] = 0x37;
+	s.svrAddress[2] = 0x86;
+	s.svrAddress[3] = 0x2d;
+	s.svrAddress[4] = 0xb2;
+	s.svrAddress[5] = 0x3d;
 	
 	// Sequence Random Number
-	s.sequenceNumber = 0x09ABCDEF;
+	s.sequenceNumber = random32();
 
     // Main Loop
     // RTOS and interrupts would greatly improve this code,
@@ -483,6 +496,7 @@ int main(void)
             if (etherIsArpResponse(data))
             {
                 dhcpProcessArpResponse(data);
+				tcpProcessArpResponse(data, &s);
             }
 
             // Handle IP datagram
